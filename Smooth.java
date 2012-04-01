@@ -4,56 +4,101 @@ import java.io.IOException;
 import java.util.LinkedList;
 import java.util.StringTokenizer;
 
-class Action {
-	int type; // delete 1; insert 2; change 3; root 0
-	int cost;
-	Action children[];
-	
-	Action(int _type, int _cost) {
-		type = _type;
-		cost = _cost;
-		children = new Action[3];
-	}
-	
-	int getType() {return type;}
-	int getCost() {return cost;}
-	
-	void setChildren (Action a, int idx) {
-		children[idx-1] = a;
-	}
-	
-	Action [] getChildren() {
-		return children;
-	}
-}
-
 public class Smooth {
 
-	private static final int DELETE = 1;
-	private static final int INSERT = 2;
-	private static final int CHANGE = 3;
-
+    private static int DELETE = 0;
+    private static int CHANGE = 1;
+    private static int INSERT = 2;
 
 	private static void print(String sth) {
 		System.out.println(sth);
 	}
+
+    private static int [] getBestMethod(LinkedList<Integer> arr, int D, int I, int M, int current) {
+        int first = arr.get(current);
+        int second = arr.get(current+1);
+
+        // choose whether use insert, delete or change
+
+        // consider delete
+        LinkedList<Integer> deleteArr = new LinkedList<Integer>(arr);
+        deleteArr.remove(current+1);
+        int deleteCost = D + getSmooth(deleteArr, D, I, M, current);
+
+        // consider change
+        LinkedList<Integer> changeArr = new LinkedList<Integer>(arr);
+        int toChange = first > second? first - M : first + M;
+        changeArr.set(current+1, toChange);
+        int changeCost = Math.abs(second - toChange) + getSmooth(changeArr, D, I, M, current+1);
+
+        int insertCost = 10000000;
+        // consider insert
+        if (M != 0) {
+            LinkedList<Integer> insertArr = new LinkedList<Integer>(arr);
+            insertArr.add(current+1, toChange); 
+            insertCost = I + getSmooth(insertArr, D, I, M, current+1);
+        }
+
+        if (M != 0) {
+            if (deleteCost>changeCost) {
+                if (changeCost>insertCost) {
+                    // choose insert
+                	print("insert");
+                    arr.add(current+1, toChange);
+                    return new int[]{INSERT, insertCost};
+                } else {
+                    // choose change
+                	print("change"); 
+                    arr.set(current+1, toChange);
+                    return new int[]{CHANGE, changeCost};
+                }
+            } else {
+                if (deleteCost>insertCost) {
+                    // choose insert
+                	print("insert");
+                    arr.add(current+1, toChange);
+                    return new int[]{INSERT, insertCost};
+                } else {
+                    // choose delete 
+                    arr.remove(current+1);
+                	print("delete");
+                    return new int[]{DELETE, deleteCost};
+                }
+            }
+        } else {
+            if (deleteCost>changeCost)  {
+                // choose change 
+            	print("change");
+                arr.set(current+1, toChange);
+                return new int[]{CHANGE, changeCost};
+            } else {
+                // choose delete
+            	print("delete"); 
+                arr.remove(current+1);
+                return new int[]{DELETE, deleteCost};
+            }
+        }
+
+    }
 	
-	private static int getSmooth(LinkedList<Integer> arr, int D, int I, int M) {
-		int ptr = 0;
-		int cost = 0;
-		Action costTree = new Action(0, 0);
-		
-		while (ptr!=arr.size() - 1) {
-			int A = arr.get(ptr);
-			int B = arr.get(ptr+1);
+	private static int getSmooth(LinkedList<Integer> arr, int D, int I, int M, int current) {
+		print("current: "+current+" arrSize: "+arr.size());
+		if (current+1 >= arr.size()) {
+            // everything is smooth
+			return 0;
+		} else {
+			int first = arr.get(current);
+			int second = arr.get(current+1);
 			
+            // if they are smooth, then pass to next
+			if (Math.abs(first-second)<=M) 
+                return getSmooth(arr, D, I, M, current+1);
 			
-			
-			
-			ptr++;
-		}
-		
-		return cost;
+            int bestRet[] = getBestMethod(arr, D, I, M, current);
+
+            if (bestRet[0] == DELETE) return bestRet[1] + getSmooth(arr, D, I, M, current);
+            else return bestRet[1] + getSmooth(arr, D, I, M, current+1);
+        }
 	}
 	
 	
@@ -75,7 +120,7 @@ public class Smooth {
 				arr.add(Integer.parseInt(st.nextToken()));
 			}
 			
-			print("Case #"+(1+i)+": "+getSmooth(arr, D, I, M));	
+			print("Case #"+(1+i)+": "+getSmooth(arr, D, I, M, 0));	
 		}
 		
 	}
